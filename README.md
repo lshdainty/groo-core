@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/POREST_Core-6DB33F?style=for-the-badge&logo=spring&logoColor=white" alt="POREST Core" />
+  <img src="https://img.shields.io/badge/groo--core-6DB33F?style=for-the-badge&logo=spring&logoColor=white" alt="그루 Core" />
 </p>
 
-<h1 align="center">POREST Core</h1>
+<h1 align="center">그루 Core</h1>
 
 <p align="center">
-  <strong>POREST 백엔드 공통 라이브러리</strong>
+  <strong>그루 백엔드 공통 라이브러리</strong>
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 ## 소개
 
-**porest-core**는 [POREST](https://github.com/lshdainty/POREST) 백엔드 프로젝트에서 공통으로 사용되는 라이브러리입니다.
+**groo-core**(레포 이름은 아직 `porest-core`)는 [그루](https://github.com/lshdainty/groo) 백엔드 프로젝트에서 공통으로 사용되는 라이브러리입니다.
 
 예외 처리, 국제화(i18n), API 응답 포맷, JPA Auditing, 페이지네이션, 검증 어노테이션, 로깅 AOP 등 프로젝트 전반에서 사용되는 컴포넌트를 제공합니다.
 
@@ -155,7 +155,7 @@
 
 ```
 src/main/
-├── java/com/porest/core/
+├── java/io/groo/core/
 │   ├── config/
 │   │   ├── web/                 # LocaleConfig
 │   │   ├── properties/          # SecurityProperties
@@ -291,7 +291,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.porest:porest-core:2.4.0'
+    implementation 'io.groo:groo-core:3.0.0'
 }
 ```
 

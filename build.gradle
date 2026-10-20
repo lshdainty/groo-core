@@ -3,8 +3,8 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'com.porest'
-version = '2.4.0'
+group = 'io.groo'
+version = '3.0.0'
 
 java {
     toolchain {
@@ -60,12 +60,12 @@ tasks.named('test') {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId = 'porest-core'
+            artifactId = 'groo-core'
             from components.java
 
             pom {
-                name = 'Porest Core'
-                description = 'Core utilities, exceptions, and configurations for Porest project'
+                name = '그루 Core'
+                description = '그루 백엔드 서비스(이음 · 담다 · SSO)의 공통 라이브러리 — 예외 · 응답 · 메시지 · 감사 · 로깅 · 시간 유틸'
             }
         }
     }

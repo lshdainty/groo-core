@@ -32,7 +32,7 @@ for f in src/main/resources/message/core-messages*.properties; do \
 ## 이 레포에서만 통하는 것
 
 - **core 빈에 필수 생성자 의존을 새로 추가하지 마라.** core 는 auto-configuration 이 아니고
-  (`META-INF/spring/*.imports` 없음) 서비스 3개가 `scanBasePackages = {"...", "com.porest.core"}` 로
+  (`META-INF/spring/*.imports` 없음) 서비스 3개가 `scanBasePackages = {"...", "io.groo.core"}` 로
   통째로 스캔한다. 그 의존을 구현하지 않은 서비스는 컴파일이 아니라 **기동**에서 죽는다.
   선택적 협력자는 `ObjectProvider<T>` 로 받고 없으면 조용히 비활성화하라
   (`audit/AuditAccessAspect.java` 가 본보기 — 1회 warn 후 return).
@@ -72,3 +72,12 @@ for f in src/main/resources/message/core-messages*.properties; do \
 태그 `v<version>` 를 밀면 `.github/workflows/release.yml` 이 GitHub Release 를 만든다 —
 그래서 태그는 상위 CLAUDE.md 규칙대로 사용자 몫이다. core 의 공개 API 시그니처를 바꿨다면
 소비 레포 3곳이 동시에 컴파일 실패하므로 같이 고쳐질 작업으로 잡아라.
+
+## 패키지 · 좌표 (2026-10-20 변경, 3.0.0)
+
+- 패키지 `com.porest.core` → **`io.groo.core`**. 서비스 쪽 패키지는 `io.groo.ieum`(HR) · `io.groo.damda`(Desk) · `io.groo.sso` 다.
+- Maven 좌표 `com.porest:porest-core` → **`io.groo:groo-core`**. 패키지가 바뀌었으니 소비 서비스 3곳은 import 와
+  `scanBasePackages` 를 **한꺼번에** 따라가야 한다 — 하나라도 옛 패키지로 남으면 컴파일이나 기동에서 죽는다.
+- 레포 이름은 아직 `porest-core` 다. GitHub Packages 주소(`maven.pkg.github.com/lshdainty/porest-core`)가 레포 이름을 따르므로,
+  레포를 바꿀 때는 배포 주소와 소비 서비스의 저장소 설정을 같이 본다.
+- 패키지 이름이 직렬화 문자열(Jackson `@class`, Redis 캐시 값 등)로 남는 서비스는 배포 때 옛 캐시를 비워야 한다 — 서비스별 확인은 각 레포에서 한다.
