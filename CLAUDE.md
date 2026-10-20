@@ -1,4 +1,4 @@
-# porest-core — 작업 규칙
+# groo-core — 작업 규칙
 
 > **워크스페이스 공통 규칙**(Git 작업 격리 · 스테이징 범위 · 태그·릴리스)은
 > 상위 `/home/lshdainty/study/CLAUDE.md` 에 있다. Claude Code 가 디렉토리 워크업으로
@@ -78,6 +78,6 @@ for f in src/main/resources/message/core-messages*.properties; do \
 - 패키지 `com.porest.core` → **`io.groo.core`**. 서비스 쪽 패키지는 `io.groo.ieum`(HR) · `io.groo.damda`(Desk) · `io.groo.sso` 다.
 - Maven 좌표 `com.porest:porest-core` → **`io.groo:groo-core`**. 패키지가 바뀌었으니 소비 서비스 3곳은 import 와
   `scanBasePackages` 를 **한꺼번에** 따라가야 한다 — 하나라도 옛 패키지로 남으면 컴파일이나 기동에서 죽는다.
-- 레포 이름은 아직 `porest-core` 다. GitHub Packages 주소(`maven.pkg.github.com/lshdainty/porest-core`)가 레포 이름을 따르므로,
+- 레포 이름도 `porest-core` → **`groo-core`** 로 바꿨다(2026-10-20). GitHub Packages 주소는 `maven.pkg.github.com/lshdainty/groo-core` 이고, 옛 `porest-core` 주소와 `com.porest:porest-core` 옛 버전(~2.4.0)도 그대로 받아진다(이름 변경 뒤에 확인했다).
   레포를 바꿀 때는 배포 주소와 소비 서비스의 저장소 설정을 같이 본다.
 - 패키지 이름이 직렬화 문자열(Jackson `@class`, Redis 캐시 값 등)로 남는 서비스는 배포 때 옛 캐시를 비워야 한다 — 서비스별 확인은 각 레포에서 한다.
