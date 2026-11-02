@@ -6,7 +6,7 @@
 
 ## 이 레포는
 
-`porest-desk-back` · `porest-hr-back` · `porest-sso-back` 이 공유하는 Spring Boot 공통 라이브러리
+`groo-damda-back` · `groo-ieum-back` · `groo-sso-back` 이 공유하는 Spring Boot 공통 라이브러리
 (예외 체계 · ApiResponse · 다국어 메시지 · 페이지네이션 · JPA Auditing · 로깅/접속기록 AOP · 시간 유틸).
 실행되는 앱이 아니라 GitHub Packages 로 배포하는 `java-library` 모듈이다 — 여기서 잘못 건드리면
 서비스 3개의 **기동**이 깨진다. Java 25 toolchain / Gradle 9.2.1 / Spring Boot 4.0.2 / Jackson 3.
@@ -76,8 +76,8 @@ for f in src/main/resources/message/core-messages*.properties; do \
 ## 패키지 · 좌표 (2026-10-20 변경, 3.0.0)
 
 - 패키지 `com.porest.core` → **`io.groo.core`**. 서비스 쪽 패키지는 `io.groo.ieum`(HR) · `io.groo.damda`(Desk) · `io.groo.sso` 다.
-- Maven 좌표 `com.porest:porest-core` → **`io.groo:groo-core`**. 패키지가 바뀌었으니 소비 서비스 3곳은 import 와
+- Maven 좌표 `com.porest:groo-core` → **`io.groo:groo-core`**. 패키지가 바뀌었으니 소비 서비스 3곳은 import 와
   `scanBasePackages` 를 **한꺼번에** 따라가야 한다 — 하나라도 옛 패키지로 남으면 컴파일이나 기동에서 죽는다.
-- 레포 이름도 `porest-core` → **`groo-core`** 로 바꿨다(2026-10-20). GitHub Packages 주소는 `maven.pkg.github.com/lshdainty/groo-core` 이고, 옛 `porest-core` 주소와 `com.porest:porest-core` 옛 버전(~2.4.0)도 그대로 받아진다(이름 변경 뒤에 확인했다).
+- 레포 이름도 `groo-core` → **`groo-core`** 로 바꿨다(2026-10-20). GitHub Packages 주소는 `maven.pkg.github.com/lshdainty/groo-core` 이고, 옛 `groo-core` 주소와 `com.porest:groo-core` 옛 버전(~2.4.0)도 그대로 받아진다(이름 변경 뒤에 확인했다).
   레포를 바꿀 때는 배포 주소와 소비 서비스의 저장소 설정을 같이 본다.
 - 패키지 이름이 직렬화 문자열(Jackson `@class`, Redis 캐시 값 등)로 남는 서비스는 배포 때 옛 캐시를 비워야 한다 — 서비스별 확인은 각 레포에서 한다.

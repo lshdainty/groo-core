@@ -19,11 +19,11 @@
 
 ## 소개
 
-**groo-core**(전 이름 `porest-core`)는 [그루](https://github.com/lshdainty/groo) 백엔드 프로젝트에서 공통으로 사용되는 라이브러리입니다.
+**groo-core**(전 이름 `groo-core`)는 [그루](https://github.com/lshdainty/groo) 백엔드 프로젝트에서 공통으로 사용되는 라이브러리입니다.
 
 예외 처리, 국제화(i18n), API 응답 포맷, JPA Auditing, 페이지네이션, 검증 어노테이션, 로깅 AOP 등 프로젝트 전반에서 사용되는 컴포넌트를 제공합니다.
 
-현재 **porest-desk-back**, **porest-hr-back**, **porest-sso-back**에서 사용 중입니다. (porest-skc-back 미사용)
+현재 **groo-damda-back**, **groo-ieum-back**, **groo-sso-back**에서 사용 중입니다. (porest-skc-back 미사용)
 
 ---
 
@@ -322,11 +322,11 @@ GitHub Packages로 배포합니다. CI 배포는 없으며 **수동으로 `gradl
 | Repository | Description |
 |------------|-------------|
 | [groo](https://github.com/lshdainty/groo) | 통합 레포지토리 (서비스 소개) |
-| [porest-desk-back](https://github.com/lshdainty/porest-desk-back) | Desk 백엔드 |
-| [porest-hr-back](https://github.com/lshdainty/porest-hr-back) | HR 백엔드 |
-| [porest-hr-front](https://github.com/lshdainty/porest-hr-front) | HR 프론트엔드 |
-| [porest-sso-back](https://github.com/lshdainty/porest-sso-back) | SSO 백엔드 |
-| [porest-sso-front](https://github.com/lshdainty/porest-sso-front) | SSO 프론트엔드 |
+| [groo-damda-back](https://github.com/lshdainty/groo-damda-back) | Desk 백엔드 |
+| [groo-ieum-back](https://github.com/lshdainty/groo-ieum-back) | HR 백엔드 |
+| [groo-ieum-front](https://github.com/lshdainty/groo-ieum-front) | HR 프론트엔드 |
+| [groo-sso-back](https://github.com/lshdainty/groo-sso-back) | SSO 백엔드 |
+| [groo-sso-front](https://github.com/lshdainty/groo-sso-front) | SSO 프론트엔드 |
 
 ---
 
