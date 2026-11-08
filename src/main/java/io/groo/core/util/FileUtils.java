@@ -503,6 +503,22 @@ public final class FileUtils {
     // ========================================
 
     /**
+     * 저장용 파일명이 이름 하나인지 검사한다.
+     * 경로 구분자({@code /} · {@code \\}), 널바이트, {@code .} · {@code ..} 단독 이름은 안전하지 않다.
+     * 한글 · 공백 · 점이 여러 개 있는 이름은 그대로 통과한다. (퍼센트 인코딩은 해석하지 않으므로 글자 그대로의 이름이다)
+     */
+    static boolean isSafeFileName(String fileName) {
+        if (!StringUtils.hasText(fileName)) {
+            return false;
+        }
+        if (fileName.indexOf('/') >= 0 || fileName.indexOf('\\') >= 0 || fileName.indexOf('\0') >= 0) {
+            return false;
+        }
+        String trimmed = fileName.trim();
+        return !trimmed.equals(".") && !trimmed.equals("..");
+    }
+
+    /**
      * MultipartFile 저장
      * <p>
      * 업로드된 파일을 지정된 경로에 저장합니다.
@@ -543,12 +559,23 @@ public final class FileUtils {
             return false;
         }
 
+        // 경로 조작 방어: 파일명은 경로가 아니라 이름 하나여야 한다 (../ · 절대경로 · 널바이트 거절)
+        if (!isSafeFileName(fileName)) {
+            log.warn("Rejected unsafe file name. path: {}, fileName: {}", path, fileName.replace('\0', '?'));
+            return false;
+        }
+
         log.debug("Saving file. path: {}, fileName: {}", path, fileName);
         try {
             Path directory = Paths.get(path);
             Files.createDirectories(directory);
 
+            // 최종 방어선: 정규화한 결과가 저장 디렉터리 바로 아래여야 한다
             Path filePath = directory.resolve(fileName);
+            if (!directory.toAbsolutePath().normalize().equals(filePath.toAbsolutePath().normalize().getParent())) {
+                log.warn("Rejected file name escaping directory. path: {}, fileName: {}", path, fileName);
+                return false;
+            }
             multipartFile.transferTo(filePath.toFile());
             log.info("File saved successfully. path: {}, fileName: {}", path, fileName);
             return true;
