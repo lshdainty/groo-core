@@ -187,7 +187,9 @@ public abstract class AbstractRequestResponseLoggingFilter extends OncePerReques
             String method = request.getMethod();
             String uri = request.getRequestURI();
             String queryString = request.getQueryString();
-            String clientIp = HttpUtils.getClientIp();
+            // 요청 객체에서 바로 꺼낸다(3.2.1). 인자 없는 HttpUtils.getClientIp() 는 RequestContextHolder 를 보는데,
+            // 이 필터가 RequestContextFilter 보다 앞에 등록되면(이음이 HIGHEST_PRECEDENCE) 비어 있어 로그가 "IP:-" 였다.
+            String clientIp = HttpUtils.getClientIp(request);
             String userId = currentUserId();
             String userAgent = getUserAgent(request);
             String requestBody = getRequestBody(request);
