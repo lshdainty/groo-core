@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'io.groo'
-version = '3.1.0'
+version = '3.2.0'
 
 java {
     toolchain {
@@ -34,6 +34,11 @@ dependencies {
     // Spring Data JPA (Auditing 지원)
     compileOnly 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
 
+    // 보안 공통(3.2.0) — 서비스가 이미 쓰는 버전과 맞춘다
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis:4.0.2'
+    compileOnly 'io.jsonwebtoken:jjwt-api:0.12.6'
+    compileOnly 'com.nimbusds:nimbus-jose-jwt:10.4'
+
     // QueryDSL (Q 클래스 생성용)
     compileOnly 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
     annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:7.1:jpa'
@@ -53,6 +58,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-security:4.0.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-redis:4.0.2'
+    testImplementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    testImplementation 'com.nimbusds:nimbus-jose-jwt:10.4'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
     testImplementation 'org.assertj:assertj-core:3.27.7'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.3'

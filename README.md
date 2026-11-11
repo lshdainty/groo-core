@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.1.0-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-3.2.0-blue" alt="Version" />
   <img src="https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white" alt="Java" />
   <img src="https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/GitHub_Packages-181717?logo=github&logoColor=white" alt="GitHub Packages" />
@@ -160,6 +160,18 @@
 |--------|------|
 | `AuditorPrincipal` | JPA Auditing용 Principal 인터페이스 |
 | `AbstractAuditorAware` | JPA 작성자·수정자 결정의 공통 뼈대(3.1.0). 서비스는 상속해 익명·낯선 주체일 때 값만 정한다 |
+| `LoginUser` · `web.AbstractLoginUserArgumentResolver<T>` | `@LoginUser` 인자 채우기(3.2.0). 서비스는 타입과 주체→객체 변환만 정한다(기본: 없으면 401) |
+| `jwt.SsoJwksKeyLocator` | SSO 토큰 공개키를 설정된 JWKS 에서만 찾는다(jku 무시, RSA 만, kid 매칭) |
+| `web.ClientIpResolver` | 실제 클라이언트 IP. 사설 대역 프록시에서 온 요청만 전달 헤더를 본다 — `HttpUtils.getClientIp` 도 이걸 쓴다. **서비스는 `forward-headers-strategy: native` 필수** |
+| `web.SecurityErrorResponder` · `JsonAuthenticationEntryPoint` · `JsonAccessDeniedHandler` | 필터·시큐리티 오류를 컨트롤러와 같은 `ApiResponse` 봉투·다국어로 |
+| `web.OriginCheckFilter` | 쿠키 인증의 CSRF 방어 — 상태 변경 요청의 Origin/Referer 를 허용 목록과 대조(SameSite 가 못 막는 형제 서브도메인) |
+| `web.PrometheusAccessFilter` | `/actuator/prometheus` 를 내부망 직접 요청에만 연다 |
+| `web.IpBlockFilter` + `web.IpBlocklist` | 차단 IP 403. 목록 저장소는 서비스가 구현 |
+| `web.MaliciousPathBlockFilter` | `.git`·`.env`·백업·웹셸 같은 스캐너 경로 403 |
+| `web.RedisRateLimitInterceptor` | IP 별 고정 구간 레이트리밋, Redis 장애 시 fail-open/closed 선택 |
+
+> **보안 공통 모듈(3.2.0)** — 필터는 서비스의 `SecurityConfig` 에서 `new` 로 만들어 `addFilterBefore` 한다(빈으로 만들면
+> 서블릿 필터로도 한 번 더 등록된다). `SecurityErrorResponder` 와 `SsoJwksKeyLocator` 는 서비스가 `@Bean` 으로 만든다.
 
 ### Message
 
@@ -312,7 +324,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.groo:groo-core:3.1.0'
+    implementation 'io.groo:groo-core:3.2.0'
 }
 ```
 

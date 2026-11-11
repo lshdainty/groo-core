@@ -62,6 +62,9 @@ public enum ErrorCode implements ErrorCodeProvider {
     REQUIRED_VALUE_MISSING("COMMON_400", "error.common.required.value.missing", HttpStatus.BAD_REQUEST),
     INVALID_REFERENCE("COMMON_400", "error.common.invalid.reference", HttpStatus.BAD_REQUEST),
     CONCURRENT_MODIFICATION("COMMON_409", "error.common.concurrent.modification", HttpStatus.CONFLICT),
+    // 필터·인터셉터에서 쓰는 보호 장치 응답(3.2.0)
+    RATE_LIMITED("COMMON_429", "error.common.rate.limited", HttpStatus.TOO_MANY_REQUESTS),
+    TEMPORARILY_UNAVAILABLE("COMMON_503", "error.common.temporarily.unavailable", HttpStatus.SERVICE_UNAVAILABLE),
 
     // ========================================
     // FILE (파일)
