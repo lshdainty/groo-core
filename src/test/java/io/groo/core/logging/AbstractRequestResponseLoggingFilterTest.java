@@ -97,6 +97,25 @@ class AbstractRequestResponseLoggingFilterTest {
     }
 
     @Test
+    void RequestContextHolder_가_비어도_요청에서_IP_를_찾아_로그에_남긴다() throws Exception {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        SampleFilter capturing = new SampleFilter() {
+            @Override
+            protected void logRequestResponse(org.springframework.web.util.ContentCachingRequestWrapper request,
+                                              org.springframework.web.util.ContentCachingResponseWrapper response,
+                                              String traceId, long executionTime) {
+                lines.add(io.groo.core.util.HttpUtils.getClientIp(request));
+            }
+        };
+        MockHttpServletRequest request = get("/api/v1/assets");
+        request.setRemoteAddr("198.51.100.7");
+
+        capturing.doFilter(request, new MockHttpServletResponse(), (req, res) -> { });
+
+        assertThat(lines).containsExactly("198.51.100.7");
+    }
+
+    @Test
     void 필터를_거친_뒤에도_응답_본문은_그대로_나간다() throws Exception {
         MockHttpServletRequest request = get("/api/v1/assets");
         MockHttpServletResponse response = new MockHttpServletResponse();
