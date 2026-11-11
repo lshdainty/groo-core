@@ -16,11 +16,18 @@
 `java` 는 PATH 에 이미 있고(temurin-17) 실제 컴파일은 temurin-25 toolchain 으로 fork 되므로 env 준비는 없다.
 
 ```bash
-./gradlew compileJava   # 사실상 유일한 검증. src/test 가 없어 test 태스크는 no-op 이다
+./gradlew compileJava test   # 컴파일 + 단위 테스트(마스커·파일 저장·예외 처리·로그 필터·감사 뼈대)
 ```
 
-**"테스트를 돌려 확인했다"는 이 레포에서 성립하지 않는다.** 자바 파일 51개가 전부 `src/main` 아래다.
-`./gradlew build` 도 javadoc 이 `Xdoclint:none` 이라 컴파일 이상은 못 잡는다.
+테스트는 일부 영역(위 괄호)에만 있다. 나머지는 여전히 **컴파일이 유일한 검증**이고,
+`./gradlew build` 도 javadoc 이 `Xdoclint:none` 이라 컴파일 이상은 못 잡는다. 그래서 core 를 바꾸면
+**소비 서비스 3곳을 로컬 core 로 테스트한 뒤에 publish 한다** — 한 번 올린 버전은 덮어쓸 수 없다:
+
+```bash
+./gradlew publishToMavenLocal                     # core 쪽
+printf 'allprojects { repositories { mavenLocal() } }\n' > /tmp/ml.gradle
+./gradlew test -I /tmp/ml.gradle --refresh-dependencies   # 각 서비스 쪽(버전은 미리 올려 둔다)
+```
 
 메시지 키를 건드렸으면 3파일 정합성을 따로 본다 (출력이 비어야 정상):
 

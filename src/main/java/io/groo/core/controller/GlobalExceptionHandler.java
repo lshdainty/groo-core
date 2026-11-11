@@ -5,23 +5,37 @@ import io.groo.core.exception.EntityNotFoundException;
 import io.groo.core.exception.ErrorCode;
 import io.groo.core.exception.ErrorCodeProvider;
 import io.groo.core.exception.ExternalServiceException;
+import io.groo.core.exception.IntegrityViolationKind;
+import io.groo.core.exception.IntegrityViolations;
 import io.groo.core.exception.UnauthorizedException;
 import io.groo.core.message.MessageKey;
 import io.groo.core.util.MessageResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.format.DateTimeParseException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -137,6 +151,9 @@ import java.util.stream.Collectors;
  *   <tr><td>BusinessException 계열</td><td>WARN</td><td>X</td></tr>
  *   <tr><td>ExternalServiceException</td><td>ERROR</td><td>O</td></tr>
  *   <tr><td>NoResourceFoundException</td><td>WARN</td><td>X (보안)</td></tr>
+ *   <tr><td>요청 방식·형식·값 오류(400·404·405·415)</td><td>WARN</td><td>X</td></tr>
+ *   <tr><td>동시 수정·DB 제약 위반(409·400)</td><td>WARN</td><td>X</td></tr>
+ *   <tr><td>클라이언트 연결 끊김(AsyncRequestNotUsable)</td><td>DEBUG</td><td>X</td></tr>
  *   <tr><td>Exception (예상치 못한)</td><td>ERROR</td><td>O</td></tr>
  * </table>
  *
@@ -315,7 +332,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("AccessDeniedException: {}", e.getMessage());
 
-        String message = messageResolver.getMessage(ErrorCode.FORBIDDEN);
+        String message = message(ErrorCode.FORBIDDEN);
         ApiResponse<Void> response = ApiResponse.error(ErrorCode.FORBIDDEN.getCode(), message);
 
         return ResponseEntity
@@ -368,7 +385,7 @@ public class GlobalExceptionHandler {
 
         String message = e.getMessage() != null && !e.getMessage().isEmpty()
                 ? e.getMessage()
-                : messageResolver.getMessage(ErrorCode.INVALID_INPUT);
+                : message(ErrorCode.INVALID_INPUT);
 
         ApiResponse<Void> response = ApiResponse.error(ErrorCode.INVALID_INPUT.getCode(), message);
 
@@ -483,17 +500,15 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
-        String errorMessage = String.format("'%s' 파라미터의 값이 유효하지 않습니다.", e.getName());
-        log.warn("MethodArgumentTypeMismatchException: {}", errorMessage);
+        // 문구는 번들에서 꺼내고 파라미터 이름은 응답에 싣지 않는다(3.1.0). 예전엔 "'id' 파라미터의 값이
+        // 유효하지 않습니다." 를 코드에 박아 둬서 번역도 말투 통일도 안 됐고, 코드 이름(id·year)이 API 구조를
+        // 드러냈다(groo-damda-back QA 2026-09-03 #74 · 09-04 #75). 이름은 이 로그에만 남는다 — 지우지 말 것.
+        log.warn("MethodArgumentTypeMismatchException: name={}, required={}", e.getName(), e.getRequiredType());
 
-        ApiResponse<Void> response = ApiResponse.error(
-                ErrorCode.INVALID_INPUT.getCode(),
-                errorMessage
-        );
-
+        ErrorCode code = ErrorCode.INVALID_PARAMETER_VALUE;
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
     }
 
     /**
@@ -518,14 +533,205 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
-        log.warn("MissingServletRequestParameterException: parameter={}", e.getParameterName());
+        // 파라미터 이름은 응답 문구에 넣지 않고 로그에만 남긴다(3.1.0, 위 TypeMismatch 와 같은 이유).
+        // 인자를 넘기지 않는 이유가 하나 더 있다 — 인자가 있으면 Spring 이 문구를 MessageFormat 에 태워,
+        // 번역에 작은따옴표가 섞이는 순간 문구 일부가 인용부호로 먹혀 사라진다.
+        log.warn("MissingServletRequestParameterException: name={}, type={}", e.getParameterName(), e.getParameterType());
 
-        String message = messageResolver.getMessage(MessageKey.COMMON_MISSING_PARAMETER, e.getParameterName());
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.INVALID_INPUT.getCode(), message);
+        ErrorCode code = ErrorCode.MISSING_PARAMETER;
+        return ResponseEntity
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * 지원하지 않는 요청 방식 — 405 + {@code Allow} 헤더.
+     * <p>
+     * 경로는 있는데 메서드가 다를 때(POST 전용 API 에 GET 등) Spring 이 던진다. 매핑이 없던 동안은
+     * 마지막 {@code Exception} 핸들러로 떨어져 500 과 ERROR 스택이 남았다 — 2026-11-10 외부 봇이 sso 의
+     * POST 전용 API 를 GET 으로 훑자 ERROR 16줄이 쌓여 "오류 로그 급증" 경보가 울렸다. 클라이언트 실수이므로
+     * 4xx 로 답하고 WARN 한 줄만 남긴다. RFC 9110 은 405 에 {@code Allow} 를 요구한다.
+     *
+     * @param e HttpRequestMethodNotSupportedException 예외
+     * @return 405 에러 응답
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+        log.warn("HttpRequestMethodNotSupportedException: method={}, supported={}", e.getMethod(), e.getSupportedHttpMethods());
+
+        ErrorCode code = ErrorCode.METHOD_NOT_ALLOWED;
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(code.getHttpStatus());
+        String allow = allowHeader(e.getSupportedHttpMethods());
+        if (allow != null) {
+            builder.header(HttpHeaders.ALLOW, allow);
+        }
+        return builder.body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * 읽을 수 없는 요청 본문 — 400.
+     * <p>
+     * JSON 문법 오류, 필드 타입 불일치(문자열 자리에 객체 등), 빈 본문이 여기로 온다. 역시 클라이언트 실수다.
+     * 원인 메시지는 내부 클래스 이름이 섞여 있어 응답에 싣지 않고 WARN 로그에만 남긴다.
+     *
+     * @param e HttpMessageNotReadableException 예외
+     * @return 400 에러 응답
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        // 원인 사슬에 날짜 파싱 실패가 있으면 "날짜가 아니다" 로 더 정확히 답한다.
+        ErrorCode code = isDateFailure(e) ? ErrorCode.INVALID_DATE_VALUE : ErrorCode.MALFORMED_REQUEST_BODY;
+        log.warn("HttpMessageNotReadableException: code={}, cause={}", code.name(), e.getMostSpecificCause().getMessage());
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * 지원하지 않는 Content-Type — 415.
+     *
+     * @param e HttpMediaTypeNotSupportedException 예외
+     * @return 415 에러 응답
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
+        log.warn("HttpMediaTypeNotSupportedException: contentType={}", e.getContentType());
+
+        ErrorCode code = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+        return ResponseEntity
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * 클라이언트가 먼저 끊은 비동기 응답(SSE 등) — 아무것도 쓰지 않고 끝낸다.
+     * <p>
+     * 앱이 백그라운드로 가거나 탭을 닫으면 정상적으로 생긴다. 예전엔 마지막 핸들러가 ERROR 스택을 찍고
+     * JSON 을 쓰려다 {@code text/event-stream} 응답이라 실패해 WARN 을 한 번 더 남겼다(끊김 1번에 2건).
+     * 받을 사람이 이미 떠났으므로 DEBUG 한 줄로 끝낸다.
+     * <p>
+     * <b>{@link HttpServletResponse} 인자는 쓰지 않지만 지우면 안 된다.</b> 반환이 {@code void} 인 예외
+     * 핸들러는 응답 인자를 받아야 "응답을 직접 처리했다" 로 표시되고, 아니면 Spring 이 뷰 이름을 찾으러 간다.
+     * 응답 객체를 건드리면 끊긴 소켓에 쓰다가 같은 예외가 다시 난다.
+     *
+     * @param e        AsyncRequestNotUsableException 예외
+     * @param response 처리 완료 표시용 (사용하지 않음)
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsableException(AsyncRequestNotUsableException e, HttpServletResponse response) {
+        log.debug("Client disconnected from async response: {}", e.getMessage());
+    }
+
+    /**
+     * 컨트롤러가 직접 날짜를 파싱하다 실패 — 400.
+     *
+     * @param e DateTimeParseException 예외
+     * @return 400 에러 응답
+     */
+    @ExceptionHandler(DateTimeParseException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDateTimeParseException(DateTimeParseException e) {
+        log.warn("DateTimeParseException: parsed={}", e.getParsedString());
+
+        ErrorCode code = ErrorCode.INVALID_DATE_VALUE;
+        return ResponseEntity
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * 매핑이 아예 없는 경로 — 404. <b>지금 구성에선 던져지지 않는 안전망이다.</b>
+     * <p>
+     * 정적 리소스 핸들러(`/**`)가 먼저 받아 {@link NoResourceFoundException} 을 던지므로 평소엔 위 핸들러가
+     * 답한다. {@code spring.web.resources.add-mappings=false} 로 정적 매핑을 끄는 순간 이 예외가 살아나는데,
+     * 그때 이 핸들러가 없으면 없는 경로가 500 으로 나간다. 응답은 NoResourceFound 와 글자까지 같다.
+     *
+     * @param e NoHandlerFoundException 예외
+     * @return 404 에러 응답
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoHandlerFoundException(NoHandlerFoundException e) {
+        log.warn("NoHandlerFoundException: method={}, path={}", e.getHttpMethod(), e.getRequestURL());
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("COMMON_404", messageResolver.getMessage(MessageKey.COMMON_404)));
+    }
+
+    /**
+     * 낙관적 락 충돌(동시 수정) — 409.
+     * <p>
+     * {@code @Version} 엔티티를 두 요청이 거의 동시에 고치면 늦은 쪽이 받는다. 서버 고장이 아니라 경합이므로
+     * "다시 시도하라" 로 답한다.
+     *
+     * @param e ObjectOptimisticLockingFailureException 예외
+     * @return 409 에러 응답
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleObjectOptimisticLockingFailureException(ObjectOptimisticLockingFailureException e) {
+        log.warn("ObjectOptimisticLockingFailureException: {}", e.getMessage());
+
+        ErrorCode code = ErrorCode.CONCURRENT_MODIFICATION;
+        return ResponseEntity
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /**
+     * DB 무결성 제약 위반 — 원인별로 409 / 400.
+     * <p>
+     * 서비스가 미리 막지 못한 위반이 DB 에서 터진 자리다. {@link IntegrityViolations} 가 Hibernate·벤더 코드
+     * (MariaDB·H2)로 종류를 가른다: 중복 → 409(동시 생성 경합), NOT NULL → 400, 외래키 → 400, 그 밖 → 400.
+     * 제약 이름·SQLState 는 로그에만 남고 응답에는 싣지 않는다(스키마가 드러난다).
+     *
+     * @param e DataIntegrityViolationException 예외
+     * @return 409 또는 400 에러 응답
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        IntegrityViolationKind kind = IntegrityViolations.classify(e);
+        ErrorCode code = switch (kind) {
+            case UNIQUE -> ErrorCode.CONCURRENT_MODIFICATION;
+            case NOT_NULL -> ErrorCode.REQUIRED_VALUE_MISSING;
+            case FOREIGN_KEY -> ErrorCode.INVALID_REFERENCE;
+            case OTHER -> ErrorCode.INVALID_INPUT;
+        };
+        log.warn("DataIntegrityViolationException: {} / {} -> {} {}", IntegrityViolations.describe(e),
+                e.getMostSpecificCause().getMessage(), code.getHttpStatus().value(), code.getCode());
+
+        return ResponseEntity
+                .status(code.getHttpStatus())
+                .body(ApiResponse.error(code.getCode(), message(code)));
+    }
+
+    /** 원인 사슬에 DateTimeParseException 이 있으면 날짜 문제로 본다. */
+    static boolean isDateFailure(Throwable t) {
+        int depth = 0;
+        for (Throwable c = t; c != null && depth++ < 20; c = c.getCause()) {
+            if (c instanceof DateTimeParseException) {
+                return true;
+            }
+            if (c == c.getCause()) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 오류 코드의 메시지. {@code MessageResolver#getMessage(ErrorCode)} 는 deprecated 인데, {@code ErrorCode}
+     * 타입 그대로 넘기면 자바가 그 오버로드를 고른다 — 그래서 {@link ErrorCodeProvider} 로 받아 넘긴다.
+     */
+    private String message(ErrorCodeProvider code) {
+        return messageResolver.getMessage(code);
+    }
+
+    /** {@code Allow} 헤더 값. 지원 메서드를 모르면 null(헤더를 붙이지 않는다). */
+    static String allowHeader(Set<HttpMethod> supported) {
+        if (supported == null || supported.isEmpty()) {
+            return null;
+        }
+        return supported.stream().map(HttpMethod::name).sorted().collect(Collectors.joining(", "));
     }
 
     /**
@@ -544,7 +750,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception e) {
         log.error("Unexpected Exception", e);
 
-        String message = messageResolver.getMessage(ErrorCode.INTERNAL_SERVER_ERROR);
+        String message = message(ErrorCode.INTERNAL_SERVER_ERROR);
         ApiResponse<Void> response = ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), message);
 
         return ResponseEntity

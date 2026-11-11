@@ -51,6 +51,17 @@ public enum ErrorCode implements ErrorCodeProvider {
     FORBIDDEN("COMMON_412", "error.common.forbidden", HttpStatus.FORBIDDEN),
     NOT_FOUND("COMMON_404", "error.common.not.found", HttpStatus.NOT_FOUND),
     INTERNAL_SERVER_ERROR("COMMON_500", "error.common.internal.server", HttpStatus.INTERNAL_SERVER_ERROR),
+    // 클라이언트 실수·경합인데 매핑이 없어 500 으로 새던 예외(3.1.0). groo-damda-back 이 각자 메우던 것을 올렸다.
+    // 코드·메시지 키는 damda 가 쓰던 것과 같다 — damda 는 자기 번들 문구(~어요)로 덮고, 다른 서비스는 core 문구를 쓴다.
+    MALFORMED_REQUEST_BODY("COMMON_400", "error.common.malformed.request.body", HttpStatus.BAD_REQUEST),
+    METHOD_NOT_ALLOWED("COMMON_405", "error.common.method.not.allowed", HttpStatus.METHOD_NOT_ALLOWED),
+    UNSUPPORTED_MEDIA_TYPE("COMMON_415", "error.common.unsupported.media.type", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    INVALID_DATE_VALUE("COMMON_400", "error.common.invalid.date.value", HttpStatus.BAD_REQUEST),
+    INVALID_PARAMETER_VALUE("COMMON_400", "error.common.invalid.parameter.value", HttpStatus.BAD_REQUEST),
+    MISSING_PARAMETER("COMMON_400", "error.common.missing.parameter", HttpStatus.BAD_REQUEST),
+    REQUIRED_VALUE_MISSING("COMMON_400", "error.common.required.value.missing", HttpStatus.BAD_REQUEST),
+    INVALID_REFERENCE("COMMON_400", "error.common.invalid.reference", HttpStatus.BAD_REQUEST),
+    CONCURRENT_MODIFICATION("COMMON_409", "error.common.concurrent.modification", HttpStatus.CONFLICT),
 
     // ========================================
     // FILE (파일)
