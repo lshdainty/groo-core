@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-2.4.0-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-3.1.0-blue" alt="Version" />
   <img src="https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white" alt="Java" />
   <img src="https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/GitHub_Packages-181717?logo=github&logoColor=white" alt="GitHub Packages" />
@@ -116,6 +116,8 @@
 | `@LogMethodCall` | 메서드 호출(진입/종료) 로깅 어노테이션 |
 | `LoggingAspect` | 위 어노테이션을 처리하는 AOP Aspect |
 | `SensitiveDataMasker` | 로그 문자열의 민감값 마스킹 (비밀번호·시크릿·토큰·인가코드·JWT) |
+| `AbstractRequestResponseLoggingFilter` | 요청·응답 한 줄 로그 필터의 공통 뼈대(3.1.0). 서비스는 상속해 마스커·제외 경로만 정한다 |
+| `UpstreamErrorLog` | 외부 API 오류를 로그에 옮길 때 응답 본문의 민감값·긴 숫자열을 가린다(3.1.0) |
 
 > **`SensitiveDataMasker`** — 요청/응답 로깅 필터가 로그를 찍기 **직전**에 부르는 순수 문자열 함수다.
 > 원본 요청·응답은 건드리지 않고 항상 새 문자열을 돌려주며, 어떤 입력에도 예외를 던지지 않는다.
@@ -134,11 +136,30 @@
 > 가린다. `client_id` · `state` · `n` · `kid` · `codeChallenge` 는 공개 정보라 **일부러 안 가린다**
 > (자세한 이유는 클래스 Javadoc 에 있다).
 
+> **상속해서 쓰는 뼈대(3.1.0)** — 세 서비스가 복사해 쓰던 코드를 core 로 올리고, 서비스마다 다른 부분만 열어 뒀다.
+> core 는 빈을 등록하지 않는다(서비스가 core 패키지를 통째로 스캔하므로 충돌한다). 서비스가 하위 클래스를 `@Component` 로 둔다.
+>
+> ```java
+> @Component
+> public class RequestResponseLoggingFilter extends AbstractRequestResponseLoggingFilter {
+>     private static final SensitiveDataMasker MASKER = SensitiveDataMasker.withExtraKeys("clientId");
+>     public RequestResponseLoggingFilter() { super(MASKER); }
+>
+>     @Override protected Collection<String> excludedPathPrefixes() {   // 앞부분 일치로 뺄 경로
+>         return Stream.concat(DEFAULT_EXCLUDED_PATH_PREFIXES.stream(), Stream.of("/api/v1/notifications/stream")).toList();
+>     }
+>     @Override protected Collection<String> excludedExactPaths() {     // 스트리밍 다운로드(정확 일치)
+>         return List.of("/api/v1/export");
+>     }
+> }
+> ```
+
 ### Security
 
 | 클래스 | 설명 |
 |--------|------|
 | `AuditorPrincipal` | JPA Auditing용 Principal 인터페이스 |
+| `AbstractAuditorAware` | JPA 작성자·수정자 결정의 공통 뼈대(3.1.0). 서비스는 상속해 익명·낯선 주체일 때 값만 정한다 |
 
 ### Message
 
@@ -291,7 +312,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.groo:groo-core:3.0.0'
+    implementation 'io.groo:groo-core:3.1.0'
 }
 ```
 

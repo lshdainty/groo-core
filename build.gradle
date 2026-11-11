@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'io.groo'
-version = '3.0.1'
+version = '3.1.0'
 
 java {
     toolchain {
@@ -49,6 +49,10 @@ dependencies {
 
     // 테스트 (published pom 에는 들어가지 않는다 — from components.java 는 api/implementation 만 싣는다)
     testImplementation 'org.springframework.boot:spring-boot-starter-web:4.0.2'
+    // GlobalExceptionHandler 가 spring-orm·spring-tx·hibernate 예외 타입을 참조한다(3.1.0) — 테스트에서 클래스를 올리려면 필요하다
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security:4.0.2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.2'
     testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
     testImplementation 'org.assertj:assertj-core:3.27.7'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.3'
