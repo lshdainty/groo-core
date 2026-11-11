@@ -1,5 +1,6 @@
 package io.groo.core.util;
 
+import io.groo.core.security.web.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -145,42 +146,11 @@ public final class HttpUtils {
         if (request == null) {
             return null;
         }
-
-        String ip = request.getHeader("X-Forwarded-For");
-
-        if (isInvalidIp(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (isInvalidIp(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (isInvalidIp(ip)) {
-            ip = request.getHeader("HTTP_CLIENT_IP");
-        }
-        if (isInvalidIp(ip)) {
-            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-        }
-        if (isInvalidIp(ip)) {
-            ip = request.getRemoteAddr();
-        }
-
-        // X-Forwarded-For 헤더에 여러 IP가 있을 수 있으므로 첫 번째 IP를 사용
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-
-        return ip;
+        // 3.2.0: 믿는 프록시(사설 대역의 nginx)에서 온 요청일 때만 전달 헤더를 본다. 예전엔 X-Forwarded-For 의
+        // 맨 앞 값을 그대로 믿어 요청자가 헤더 하나로 IP 를 바꿀 수 있었다(레이트리밋·감사 기록 우회).
+        return ClientIpResolver.resolve(request);
     }
 
-    /**
-     * IP 주소가 유효하지 않은지 확인
-     *
-     * @param ip 검사할 IP 주소
-     * @return 유효하지 않으면 true
-     */
-    private static boolean isInvalidIp(String ip) {
-        return ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip);
-    }
 
     // ========================================
     // 헤더 정보

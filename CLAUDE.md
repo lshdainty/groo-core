@@ -16,7 +16,7 @@
 `java` 는 PATH 에 이미 있고(temurin-17) 실제 컴파일은 temurin-25 toolchain 으로 fork 되므로 env 준비는 없다.
 
 ```bash
-./gradlew compileJava test   # 컴파일 + 단위 테스트(마스커·파일 저장·예외 처리·로그 필터·감사 뼈대)
+./gradlew compileJava test   # 컴파일 + 단위 테스트(마스커·파일 저장·예외 처리·로그 필터·감사 뼈대·보안 공통 모듈)
 ```
 
 테스트는 일부 영역(위 괄호)에만 있다. 나머지는 여전히 **컴파일이 유일한 검증**이고,
