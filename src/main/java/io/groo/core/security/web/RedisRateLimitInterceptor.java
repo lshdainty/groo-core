@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -54,7 +56,7 @@ public class RedisRateLimitInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String ip = ClientIpResolver.resolve(request);
-        String key = keyPrefix + ":" + (ip != null ? ip : "unknown");
+        String key = keyPrefix + ":" + subjectOf(ip);
         Long count;
         try {
             count = redis.opsForValue().increment(key);
@@ -74,6 +76,44 @@ public class RedisRateLimitInterceptor implements HandlerInterceptor {
             return reject(request, response, ErrorCode.RATE_LIMITED);
         }
         return true;
+    }
+
+    /**
+     * 한도를 세는 단위. IPv4 는 주소 하나, IPv6 는 <b>/64 대역</b>이다(core 3.3.0, 보안 점검 SSO-11).
+     *
+     * <p>IPv6 는 가입자 한 명이 /64(주소 2^64개)를 통째로 받는 게 보통이라, 주소 하나를 키로 쓰면 요청마다
+     * 주소를 바꿔 한도를 끝없이 우회한다. 앞 64비트만 키로 쓴다. IPv4-mapped 주소({@code ::ffff:1.2.3.4})는
+     * IPv4 로 본다. 리터럴로 읽을 수 없는 값은 원문 그대로 쓴다.
+     */
+    static String subjectOf(String ip) {
+        if (ip == null || ip.isBlank()) {
+            return "unknown";
+        }
+        if (ip.indexOf(':') < 0) {
+            return ip;
+        }
+        try {
+            String literal = ip.startsWith("[") && ip.endsWith("]") ? ip.substring(1, ip.length() - 1) : ip;
+            int zone = literal.indexOf('%');
+            if (zone >= 0) {
+                literal = literal.substring(0, zone);
+            }
+            InetAddress address = InetAddress.ofLiteral(literal);
+            if (address instanceof Inet4Address) {
+                return address.getHostAddress();
+            }
+            byte[] bytes = address.getAddress();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 8; i += 2) {
+                if (i > 0) {
+                    sb.append(':');
+                }
+                sb.append(Integer.toHexString(((bytes[i] & 0xff) << 8) | (bytes[i + 1] & 0xff)));
+            }
+            return sb.append("::/64").toString();
+        } catch (IllegalArgumentException e) {
+            return ip;
+        }
     }
 
     private boolean reject(HttpServletRequest request, HttpServletResponse response, ErrorCodeProvider code)

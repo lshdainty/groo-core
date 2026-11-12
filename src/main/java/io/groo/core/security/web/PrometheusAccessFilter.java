@@ -32,8 +32,9 @@ public class PrometheusAccessFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        return !(PATH.equals(uri) || (PATH + "/").equals(uri));
+        // 원문(getRequestURI)이 아니라 디코딩·정규화한 경로로 본다 — %70rometheus · ;x · // 로 건너뛰지 못하게.
+        String path = RequestPaths.normalized(request);
+        return !(PATH.equals(path) || (PATH + "/").equals(path));
     }
 
     @Override

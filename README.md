@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.2.1-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-3.3.0-blue" alt="Version" />
   <img src="https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white" alt="Java" />
   <img src="https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/GitHub_Packages-181717?logo=github&logoColor=white" alt="GitHub Packages" />
@@ -324,7 +324,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.groo:groo-core:3.2.1'
+    implementation 'io.groo:groo-core:3.3.0'
 }
 ```
 

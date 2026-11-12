@@ -383,9 +383,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("IllegalArgumentException: {}", e.getMessage());
 
-        String message = e.getMessage() != null && !e.getMessage().isEmpty()
-                ? e.getMessage()
-                : message(ErrorCode.INVALID_INPUT);
+        // 예외 문구는 응답에 싣지 않는다(core 3.3.0, 보안 점검 SSO-11). IllegalArgumentException 은 JDK·라이브러리가
+        // 내부 사정(enum 클래스 경로, 파서 위치, 필드 이름)을 적어 던지는 예외라 그대로 내보내면 구현이 샌다.
+        // 사용자에게 보여 줄 문구가 있으면 서비스가 ErrorCode 를 가진 예외(InvalidValueException 등)로 던진다.
+        String message = message(ErrorCode.INVALID_INPUT);
 
         ApiResponse<Void> response = ApiResponse.error(ErrorCode.INVALID_INPUT.getCode(), message);
 

@@ -103,8 +103,10 @@ public class MaliciousPathBlockFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String uri = request.getRequestURI();
+        // 원문과 디코딩·정규화한 경로를 둘 다 본다 — /%2Eenv · /.git;x/config 처럼 한 글자로 건너뛰지 못하게.
+        String path = RequestPaths.normalized(request);
         for (Pattern pattern : patterns) {
-            if (pattern.matcher(uri).matches()) {
+            if (pattern.matcher(uri).matches() || pattern.matcher(path).matches()) {
                 log.warn("Malicious path blocked - IP: {}, URI: {}, Method: {}, Pattern: {}",
                         ClientIpResolver.resolve(request), uri, request.getMethod(), pattern.pattern());
                 responder.write(request, response, ErrorCode.FORBIDDEN);
