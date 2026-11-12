@@ -166,4 +166,82 @@ class SsoEventSignatureTest {
         assertThat(v.verify(USER_EVENTS_CHANNEL, signed)).isPresent();
         assertThat(v.verify(USER_EVENTS_CHANNEL, signed)).isPresent();
     }
+
+    // ===== 보안 점검 IEU-6 후속 — 서명 안 내용 · 알고리즘 · JWKS 장애 =====
+
+    /** SSO 키로 서명하되 필드를 골라 넣는다 — 서명은 맞고 내용만 틀린 경우를 만든다. */
+    private String ssoSigned(String typ, boolean withJti, boolean withIat) throws Exception {
+        var b = Jwts.builder().header().keyId("k1").and()
+                .claim("typ", typ).claim("chn", USER_EVENTS_CHANNEL).claim("evt", EVENT)
+                .expiration(new Date(System.currentTimeMillis() + 60_000));
+        if (withJti) {
+            b.id(java.util.UUID.randomUUID().toString());
+        }
+        if (withIat) {
+            b.issuedAt(new Date());
+        }
+        return b.signWith(ssoKey.toRSAPrivateKey(), Jwts.SIG.RS256).compact();
+    }
+
+    private static String envelope(String sig) {
+        return EVENT.replace("}", ",\"sig\":\"" + sig + "\"}");
+    }
+
+    @Test
+    @DisplayName("alg=none(서명 없는 JWS)은 전환 기간이어도 거절")
+    void algNoneRejected() {
+        String unsigned = Jwts.builder().header().keyId("k1").and()
+                .claim("typ", SsoEventSignature.TYPE).claim("chn", USER_EVENTS_CHANNEL).claim("evt", EVENT)
+                .id("j-none").issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + 60_000))
+                .compact();
+        assertThat(unsigned).endsWith(".");
+
+        assertThat(verifier(false).verify(USER_EVENTS_CHANNEL, envelope(unsigned))).isEmpty();
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL, envelope(unsigned))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("SSO 키로 서명했어도 typ 이 이벤트가 아니면(다른 값) 거절")
+    void wrongTypRejected() throws Exception {
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL, envelope(ssoSigned("access", true, true)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("jti 가 없으면 거절 — 재전송 검사를 못 한다")
+    void missingJtiRejected() throws Exception {
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL,
+                envelope(ssoSigned(SsoEventSignature.TYPE, false, true)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("iat 가 없으면 거절")
+    void missingIatRejected() throws Exception {
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL,
+                envelope(ssoSigned(SsoEventSignature.TYPE, true, false)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("JWKS 를 받지 못하면(SSO 장애 · 잘못된 주소) 예외 없이 닫힌다 — 처리하지 않고, 오래 매달리지 않는다")
+    void jwksFailureClosed() {
+        String signed = signer.sign(USER_EVENTS_CHANNEL, EVENT);
+        // 아무도 듣지 않는 포트 — 연결이 바로 거절된다
+        SsoEventVerifier down = new SsoEventVerifier(
+                new SsoJwksKeyLocator("http://127.0.0.1:1/.well-known/jwks.json"), redis, true);
+        SsoEventVerifier missing = new SsoEventVerifier(
+                new SsoJwksKeyLocator(dir.resolve("nope.json").toUri().toString()), redis, true);
+
+        long start = System.currentTimeMillis();
+        assertThat(down.verify(USER_EVENTS_CHANNEL, signed)).isEmpty();
+        assertThat(missing.verify(USER_EVENTS_CHANNEL, signed)).isEmpty();
+        assertThat(System.currentTimeMillis() - start).isLessThan(15_000);
+    }
+
+    @Test
+    @DisplayName("JWKS 를 한 번 받은 뒤 SSO 가 내려가도 받아 둔 키로 계속 검증한다(장애 허용)")
+    void outageTolerantAfterFirstFetch() throws Exception {
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL, signer.sign(USER_EVENTS_CHANNEL, EVENT))).isPresent();
+        Files.delete(dir.resolve("jwks.json"));
+
+        assertThat(verifier(true).verify(USER_EVENTS_CHANNEL, signer.sign(USER_EVENTS_CHANNEL, EVENT))).isPresent();
+    }
 }
