@@ -159,6 +159,14 @@ class SecurityWebCommonsTest {
             assertThat(run(proxied).getStatus()).isEqualTo(403);
             assertThat(run(req("GET", "/actuator/prometheus", "198.51.100.7")).getStatus()).isEqualTo(403);
         }
+
+        @Test
+        void 인코딩_세미콜론_겹슬래시로_바꾼_경로도_막는다_SSO_11() throws Exception {
+            for (String sneaky : List.of("/actuator/%70rometheus", "/actuator/prometheus;x", "/actuator//prometheus",
+                    "/%61ctuator/prometheus/")) {
+                assertThat(run(req("GET", sneaky, "198.51.100.7")).getStatus()).as(sneaky).isEqualTo(403);
+            }
+        }
     }
 
     @Nested
@@ -182,6 +190,16 @@ class SecurityWebCommonsTest {
             MockHttpServletResponse ok = new MockHttpServletResponse();
             f.doFilter(req("GET", "/.well-known/jwks.json", "172.18.0.4"), ok, new MockFilterChain());
             assertThat(ok.getStatus()).isEqualTo(200);
+        }
+
+        @Test
+        void 인코딩한_스캐너_경로도_막는다_SSO_11() throws Exception {
+            MaliciousPathBlockFilter f = new MaliciousPathBlockFilter(responder, List.of());
+            for (String bad : List.of("/api/%2Eenv", "/.git;x/config", "/%2egit/config")) {
+                MockHttpServletResponse res = new MockHttpServletResponse();
+                f.doFilter(req("GET", bad, "172.18.0.4"), res, new MockFilterChain());
+                assertThat(res.getStatus()).as(bad).isEqualTo(403);
+            }
         }
     }
 
@@ -210,6 +228,30 @@ class SecurityWebCommonsTest {
             assertThat(interceptor(4L, true, false).preHandle(req("POST", "/", "172.18.0.4"), over, null)).isFalse();
             assertThat(over.getStatus()).isEqualTo(429);
             assertThat(over.getContentAsString()).contains("COMMON_429");
+        }
+
+        @Test
+        void IPv6_는_64_대역을_한_단위로_센다_SSO_11() {
+            assertThat(RedisRateLimitInterceptor.subjectOf("2001:db8:1:2:aaaa::1"))
+                    .isEqualTo(RedisRateLimitInterceptor.subjectOf("2001:db8:1:2:ffff:1:2:3"))
+                    .isEqualTo("2001:db8:1:2::/64");
+            assertThat(RedisRateLimitInterceptor.subjectOf("2001:db8:1:3::1")).isEqualTo("2001:db8:1:3::/64");
+            assertThat(RedisRateLimitInterceptor.subjectOf("203.0.113.9")).isEqualTo("203.0.113.9");
+            assertThat(RedisRateLimitInterceptor.subjectOf("::ffff:203.0.113.9")).isEqualTo("203.0.113.9");
+            assertThat(RedisRateLimitInterceptor.subjectOf(null)).isEqualTo("unknown");
+            assertThat(RedisRateLimitInterceptor.subjectOf("not:an:ip:zz")).isEqualTo("not:an:ip:zz");
+        }
+
+        @SuppressWarnings("unchecked")
+        @Test
+        void 키는_IPv6_대역으로_만든다() throws Exception {
+            StringRedisTemplate redis = mock(StringRedisTemplate.class);
+            ValueOperations<String, String> ops = mock(ValueOperations.class);
+            when(redis.opsForValue()).thenReturn(ops);
+            when(ops.increment(anyString())).thenReturn(1L);
+            new RedisRateLimitInterceptor(redis, responder, "t:rate", 3, Duration.ofMinutes(1), true)
+                    .preHandle(req("POST", "/", "2001:db8:1:2:aaaa::1"), new MockHttpServletResponse(), null);
+            org.mockito.Mockito.verify(ops).increment("t:rate:2001:db8:1:2::/64");
         }
 
         @Test

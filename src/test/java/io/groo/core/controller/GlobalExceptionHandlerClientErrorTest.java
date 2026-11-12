@@ -91,6 +91,16 @@ class GlobalExceptionHandlerClientErrorTest {
     }
 
     @Test
+    void IllegalArgumentException_의_문구는_응답에_싣지_않는다_SSO_11() {
+        ResponseEntity<ApiResponse<Void>> res = sut.handleIllegalArgumentException(
+                new IllegalArgumentException("No enum constant io.groo.secret.InternalType.FOO"));
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getBody().getMessage()).doesNotContain("io.groo").doesNotContain("No enum constant");
+        assertThat(res.getBody().getMessage()).isNotBlank();
+    }
+
+    @Test
     void 읽을_수_없는_본문은_400() {
         ResponseEntity<ApiResponse<Void>> res = sut.handleHttpMessageNotReadableException(
                 new HttpMessageNotReadableException("JSON parse error", emptyInput()));
