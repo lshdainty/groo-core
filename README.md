@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.3.0-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-3.5.0-blue" alt="Version" />
   <img src="https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white" alt="Java" />
   <img src="https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/GitHub_Packages-181717?logo=github&logoColor=white" alt="GitHub Packages" />
@@ -173,6 +173,26 @@
 > **보안 공통 모듈(3.2.0)** — 필터는 서비스의 `SecurityConfig` 에서 `new` 로 만들어 `addFilterBefore` 한다(빈으로 만들면
 > 서블릿 필터로도 한 번 더 등록된다). `SecurityErrorResponder` 와 `SsoJwksKeyLocator` 는 서비스가 `@Bean` 으로 만든다.
 
+### Redis
+
+| 클래스 | 설명 |
+|--------|------|
+| `redis.NamespacedStringRedisTemplate` | 모든 키에 서비스 접두사(`<이름>:`)를 붙이는 `StringRedisTemplate`(3.5.0). 서비스가 `stringRedisTemplate` 빈으로 등록한다 |
+| `redis.NamespacedKeySerializer` | 위 템플릿이 쓰는 키 직렬화기. 쓸 때 접두사를 붙이고 읽을 때 뗀다 |
+
+> **서비스별 Redis 키 접두사(3.5.0)** — 서비스들이 Redis 한 대를 같이 쓰고, Redis 계정 권한(ACL)은 키 이름 패턴으로만
+> 나눌 수 있다. 서비스 계정을 `~damda:*` 로 묶으려면 그 서비스의 키가 빠짐없이 `damda:` 로 시작해야 하므로,
+> 키를 만드는 자리마다 붙이지 않고 템플릿에서 한 번에 붙인다. 코드의 키 이름에는 서비스 접두사를 쓰지 않는다.
+> core 의 `RedisRateLimitInterceptor` · `SsoEventVerifier` 가 만드는 키도 넘겨받은 템플릿을 따라 같은 접두사 아래로 들어간다.
+> 채널 이름(pub/sub)에는 붙지 않는다.
+>
+> ```java
+> @Bean
+> public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+>     return new NamespacedStringRedisTemplate(connectionFactory, "damda");
+> }
+> ```
+
 ### Message
 
 | 클래스 | 설명 |
@@ -209,6 +229,7 @@ src/main/
 │   ├── logging/                 # LogExecutionTime, LogMethodCall, LoggingAspect, SensitiveDataMasker
 │   ├── message/
 │   │   └── MessageKey.java
+│   ├── redis/                   # NamespacedStringRedisTemplate, NamespacedKeySerializer
 │   ├── security/
 │   │   └── AuditorPrincipal.java
 │   ├── type/
@@ -324,7 +345,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.groo:groo-core:3.3.0'
+    implementation 'io.groo:groo-core:3.5.0'
 }
 ```
 

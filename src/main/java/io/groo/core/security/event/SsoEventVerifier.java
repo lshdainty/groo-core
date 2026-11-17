@@ -46,6 +46,7 @@ public class SsoEventVerifier {
     /**
      * @param keyLocator       SSO 공개키 조회(보통 {@code SsoJwksKeyLocator})
      * @param redis            {@code jti} 를 기억할 곳 — null 이면 재전송 검사를 하지 않는다
+     *                         (서비스의 {@code NamespacedStringRedisTemplate} 을 넘기면 키가 그 서비스 접두사 아래에 놓인다)
      * @param requireSignature 서명 없는 이벤트를 버릴지(전환이 끝나면 켠다)
      */
     public SsoEventVerifier(Locator<Key> keyLocator, StringRedisTemplate redis, boolean requireSignature) {
