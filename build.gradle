@@ -19,11 +19,11 @@ repositories {
 }
 
 dependencies {
-    // 스프링 부트가 묶어 주는 버전에 맞춘다 — 쓰는 서비스가 실제로 돌리는 버전이다(서비스와 같은 4.0.9).
+    // 스프링 부트가 묶어 주는 버전에 맞춘다 — 쓰는 서비스가 실제로 돌리는 버전이다(서비스와 같은 4.0.10).
     // 이게 없으면 스타터가 끌어오는 꾸러미(netty · jackson 2 등)가 각자의 옛 버전으로 풀려, 배포물에 들어가지도 않는
     // 버전에 취약점 경보가 뜬다(보안 점검 SUP-10). compileOnly · 테스트에만 걸어 배포되는 pom 에는 들어가지 않는다.
-    compileOnly platform('org.springframework.boot:spring-boot-dependencies:4.0.9')
-    testImplementation platform('org.springframework.boot:spring-boot-dependencies:4.0.9')
+    compileOnly platform('org.springframework.boot:spring-boot-dependencies:4.0.10')
+    testImplementation platform('org.springframework.boot:spring-boot-dependencies:4.0.10')
 
     // Spring Boot (provided - 사용하는 프로젝트에서 제공)
     compileOnly 'org.springframework.boot:spring-boot-starter-web:4.0.9'
